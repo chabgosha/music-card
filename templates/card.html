@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% from "_postcard.html" import postcard %}
+{% block title %}{% if card.sender %}Открытка от {{ card.sender }}{% else %}Вам музыкальная открытка{% endif %}{% endblock %}
+{% block meta %}
+<meta property="og:title" content="{% if card.sender %}Музыкальная открытка от {{ card.sender }}{% else %}Вам музыкальная открытка{% endif %}">
+<meta property="og:description" content="{{ theme.title }} — откройте и включите звук">
+{% endblock %}
+{% block body_class %}page-card{% endblock %}
+{% block body %}
+<main class="stage" style="--face: {{ theme.face }}; --face-ink: {{ theme.ink }};" data-card-code="{{ card.code }}">
+
+  <div class="envelope" id="envelope" data-locked="{{ 'true' if locked else 'false' }}"
+       {% if card.open_at %}data-open-at="{{ card.open_at }}"{% endif %}>
+    <div class="envelope__body">
+      <div class="envelope__stamp" aria-hidden="true"><span>{{ theme.stamp }}</span></div>
+      <p class="envelope__from">{% if card.sender %}от {{ card.sender }}{% else %}музыкальная открытка{% endif %}</p>
+      <p class="envelope__to hand">{% if card.recipient %}{{ card.recipient }}{% else %}Вам{% endif %}</p>
+      {% if locked %}
+        <p class="envelope__note" id="lock-note">Откроется <span id="open-date"></span></p>
+        <p class="countdown" id="countdown" aria-live="polite"></p>
+        <button type="button" class="btn btn--primary" disabled>Ещё рано</button>
+      {% else %}
+        <button type="button" class="btn btn--primary" id="open-btn">Открыть открытку</button>
+        <p class="envelope__note">Включите звук</p>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if not locked %}
+  <div class="opened" id="opened" hidden>
+    {{ postcard(theme, card.recipient, card.message, card.sender,
+                (card.duration_ms // 60000) ~ ":" ~ "%02d" | format((card.duration_ms // 1000) % 60),
+                size=message_size(card.message), photo_url=card_photo_url(card.code)) }}
+    <div class="player">
+      <audio id="card-audio" controls preload="auto" src="{{ audio_url }}"></audio>
+      <div class="player__actions">
+        <a class="btn" href="{{ download_url }}" download>Скачать звук</a>
+        <a class="btn btn--quiet" href="{{ url_for('index') }}">Сделать свою открытку</a>
+      </div>
+    </div>
+    {% if photo_replies_enabled(card.code) %}
+    <section class="smile" id="smile"
+             data-thanks="Улыбка отправлена! {{ card.sender or 'Отправитель' }} её увидит.">
+      <h2 class="smile__title">Ответить улыбкой</h2>
+      <p class="hint">Сфотографируйте себя — {{ card.sender or 'отправитель' }} увидит, как вам открытка. Снимок не появится на открытке, его видит только отправитель.</p>
+      <label class="check">
+        <input type="checkbox" id="smile-consent">
+        <span>Согласен(на) отправить своё фото {% if card.sender %}— его увидит {{ card.sender }}{% else %}отправителю открытки{% endif %}</span>
+      </label>
+      <input type="file" id="smile-file" accept="image/*" capture="user" hidden>
+      <button type="button" class="btn btn--primary smile__btn" id="smile-btn">📷 Ответить улыбкой</button>
+      <p class="status" id="smile-status" role="status" aria-live="polite"></p>
+      <figure class="polaroid polaroid--sent" id="smile-sent" hidden>
+        <img alt="Ваша улыбка">
+      </figure>
+    </section>
+    {% endif %}
+  </div>
+  {% endif %}
+</main>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/card.js') }}"></script>
+<script src="{{ url_for('static', filename='js/photo-utils.js') }}"></script>
+<script src="{{ url_for('static', filename='js/photos-card.js') }}"></script>
+{% endblock %}

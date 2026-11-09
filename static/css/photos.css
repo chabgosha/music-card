@@ -1,0 +1,98 @@
+/* ===== Фото в открытке: полароид на лицевой стороне, «Ответить улыбкой», статус ===== */
+
+/* --- полароид --- */
+.polaroid {
+  margin: 0; background: #fff; padding: 7px 7px 26px;
+  box-shadow: 0 10px 22px -10px rgba(24, 34, 58, .55), 0 1px 2px rgba(24, 34, 58, .18);
+  transform: rotate(-3deg);
+}
+.polaroid img { width: 100%; aspect-ratio: 1; object-fit: cover; background: var(--paper-2); }
+.polaroid__caption {
+  margin: 6px 0 -18px; text-align: center; font-size: 18px; line-height: 1.1; color: var(--ink-2);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* на лицевой стороне: заголовок повода сверху, под ним крупное фото на всю ширину, волны прячем.
+   Размеры в процентах от лицевой стороны, поэтому фото крупное и в маленьком предпросмотре,
+   и в полноэкранном, и на странице получателя. */
+.postcard__front:has(.polaroid:not([hidden])) { display: flex; flex-direction: column; gap: 10px; }
+.postcard__front:has(.polaroid:not([hidden])) .postcard__waves { display: none; }
+.polaroid--front {
+  position: relative; z-index: 1; flex: none;
+  width: 90%; margin: auto;
+  padding: 4% 4% 12%;
+  transform: rotate(-2deg);
+}
+.polaroid--front img { min-height: 0; }
+
+/* --- конструктор --- */
+.photo-pick { display: grid; gap: 10px; margin-top: 4px; }
+.photo-pick > .field__label { margin: 0; justify-content: flex-start; }
+.photo-pick__row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.photo-pick__row .file-drop { flex: 1 1 240px; position: relative; }
+
+.result__status {
+  display: grid; gap: 8px; padding-top: 14px; border-top: 1px solid var(--line);
+}
+.result__status > .field__label { margin: 0; justify-content: flex-start; }
+.result__status .btn { justify-self: start; }
+.result__status-url { margin: 0; font-size: 13px; color: var(--ink-2); overflow-wrap: anywhere; }
+
+/* --- получатель: «Ответить улыбкой» --- */
+.smile {
+  background: var(--paper); border: 1.5px solid var(--line); border-radius: 14px; padding: 18px;
+  display: grid; gap: 12px;
+}
+.smile__title { margin: 0; font-size: 20px; letter-spacing: -0.01em; }
+.smile__btn { justify-self: start; }
+.polaroid--sent { width: min(200px, 60%); justify-self: center; transform: rotate(2deg); margin-top: 4px; }
+
+/* --- страница статуса --- */
+.st-card {
+  width: min(640px, 100%); background: var(--paper); border-radius: 14px;
+  border: 1.5px solid var(--line); padding: 24px; display: grid; gap: 18px;
+  box-shadow: 0 26px 50px -24px rgba(24, 34, 58, .45);
+}
+.st-card__head { display: flex; gap: 16px; align-items: center; }
+.st-card__stamp {
+  width: 58px; height: 70px; flex: none; padding: 4px; border: 2px dotted #AEB6C4; display: grid;
+}
+.st-card__stamp span { background: var(--face); display: grid; place-items: center; font-size: 28px; }
+.st-card__kicker { margin: 0; color: var(--ink-2); font-size: 14px; }
+.st-card__title { margin: 2px 0 0; font-size: 26px; line-height: 1.15; letter-spacing: -0.015em; overflow-wrap: anywhere; }
+.st-card__title .hand { font-size: 1.3em; font-weight: 600; }
+.st-card__subtitle { margin: 4px 0 0; font-size: 19px; }
+.st-card__subtitle span { color: var(--ink-2); font-weight: 500; }
+
+.st-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+.st-step {
+  display: flex; gap: 12px; align-items: flex-start; padding: 8px 0; position: relative; color: var(--ink-2);
+}
+.st-step:not(:last-child)::after {
+  content: ""; position: absolute; left: 8px; top: 30px; bottom: -8px; width: 2px; background: var(--line);
+}
+.st-step__dot {
+  width: 18px; height: 18px; border-radius: 50%; flex: none; margin-top: 3px;
+  border: 2px solid var(--line); background: var(--paper);
+}
+.st-step[data-done="true"] { color: var(--ink); font-weight: 500; }
+.st-step[data-done="true"] .st-step__dot { border-color: var(--ok); background: var(--ok); box-shadow: inset 0 0 0 3px var(--paper); }
+
+.replies { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 22px 18px; padding: 4px 6px; }
+.replies:empty { display: none; }
+.polaroid--reply:nth-child(3n + 1) { transform: rotate(-2.5deg); }
+.polaroid--reply:nth-child(3n + 2) { transform: rotate(1.8deg); }
+.polaroid--reply:nth-child(3n) { transform: rotate(-0.8deg); }
+.polaroid--reply.is-new { animation: develop 1.6s ease-out both; }
+@keyframes develop {
+  from { opacity: 0; filter: brightness(1.8) saturate(0); translate: 0 -14px; }
+  40% { opacity: 1; }
+  to { opacity: 1; filter: none; translate: 0 0; }
+}
+
+@media (max-width: 600px) {
+  .polaroid--front { width: min(84%, 340px); margin-top: 4px; }
+  .st-card { padding: 18px 16px; }
+  .st-card__title { font-size: 22px; }
+  .replies { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 14px; }
+}

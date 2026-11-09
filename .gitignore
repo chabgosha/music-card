@@ -1,0 +1,12 @@
+.venv/
+venv/
+__pycache__/
+*.pyc
+.idea/
+data/
+ai_key.txt
+ai_test_picture.jpg
+certs/https_key.pem
+certs/
+*.pem
+.env

@@ -1,0 +1,190 @@
+--- a/app.py
++++ b/app.py
+@@ -13,6 +13,7 @@
+   POST /api/uploads    — загрузить голос или свою музыку (multipart)
+   POST /api/preview    — свести предпросмотр
+   POST /api/cards      — создать открытку
++Фото на открытке, ответы-селфи и страница статуса — в photos.py
+ """
+ import argparse
+ import hashlib
+@@ -32,6 +33,7 @@
+ 
+ import mixer
+ import network
++import photos
+ import storage
+ 
+ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+@@ -403,9 +405,10 @@
+                      voice_id=params["voice_id"], track_id=params["track"],
+                      voice_volume=params["voice_volume"], music_volume=params["music_volume"],
+                      audio_file=filename, duration_ms=duration, open_at=open_at)
++    status_path = photos.on_card_created(code, data.get("photo_id"))
+     page = f"{public_base()}/c/{code}"
+     return jsonify(code=code, url=page, qr_url=url_for("card_qr", code=code),
+-                   open_at=open_at), 201
++                   open_at=open_at, status_url=public_base() + status_path), 201
+ 
+ 
+ # ---------- запуск ----------
+@@ -455,6 +458,7 @@
+ 
+ 
+ storage.init()
++photos.register(app, THEMES)
+ 
+ if __name__ == "__main__":
+     main()
+--- a/static/js/create.js
++++ b/static/js/create.js
+@@ -388,6 +388,7 @@
+     payload.sender = form.sender.value;
+     payload.message = form.message.value;
+     payload.open_at = openAt ? new Date(openAt).toISOString() : null;
++    payload.photo_id = window.cardPhotoId || null;  // фото на открытке — static/js/photos-create.js
+ 
+     createBtn.disabled = true;
+     setStatus(createStatus, "Создаём открытку…", "busy");
+@@ -396,6 +397,7 @@
+     }).then(function (data) {
+       setStatus(createStatus, "Открытка создана. Ссылка и QR-код — рядом с открыткой.", "ok");
+       showResult(data);
++      document.dispatchEvent(new CustomEvent("card:created", { detail: data }));
+     }).catch(function (err) {
+       setStatus(createStatus, err.message, "error");
+     }).then(function () { updateCreateState(true); });
+--- a/templates/base.html
++++ b/templates/base.html
+@@ -7,6 +7,7 @@
+   {% block meta %}{% endblock %}
+   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💌</text></svg>">
+   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
++  <link rel="stylesheet" href="{{ url_for('static', filename='css/photos.css') }}">
+ </head>
+ <body class="{% block body_class %}{% endblock %}">
+   {% block body %}{% endblock %}
+--- a/templates/_postcard.html
++++ b/templates/_postcard.html
+@@ -1,6 +1,6 @@
+ {# Открытка: слева «лицевая сторона» в цвете повода, справа «оборот» с текстом, маркой и штемпелем.
+    Используется и в конструкторе (живой предпросмотр), и на странице получателя. #}
+-{% macro postcard(theme, recipient="", message="", sender="", stamp_note="", preview=False, size="") %}
++{% macro postcard(theme, recipient="", message="", sender="", stamp_note="", preview=False, size="", photo_url="") %}
+ <div class="airmail{% if preview %} airmail--preview{% endif %}">
+   <article class="postcard" data-postcard data-size="{{ size }}"
+            style="--face: {{ theme.face }}; --face-ink: {{ theme.ink }};">
+@@ -13,6 +13,9 @@
+         <path d="M16 40a64 64 0 0 1 64 64" />
+         <path d="M16 20a84 84 0 0 1 84 84" />
+       </svg>
++      <figure class="polaroid polaroid--front" data-pc-photo{% if not photo_url %} hidden{% endif %}>
++        <img src="{{ photo_url or '' }}" alt="Фото от отправителя" data-pc="photo">
++      </figure>
+     </div>
+     <div class="postcard__back">
+       <div class="postcard__stamp" aria-hidden="true"><span data-pc="stamp">{{ theme.stamp }}</span></div>
+--- a/templates/index.html
++++ b/templates/index.html
+@@ -24,7 +24,7 @@
+     </section>
+ 
+     <section class="step" aria-labelledby="s2">
+-      <h2 class="step__title" id="s2"><span class="step__num">2</span>Текст</h2>
++      <h2 class="step__title" id="s2"><span class="step__num">2</span>Текст и фото</h2>
+       <div class="field-row">
+         <label class="field">
+           <span class="field__label">Кому</span>
+@@ -39,6 +39,22 @@
+         <span class="field__label">Поздравление <span class="field__counter" id="msg-counter">0 / {{ max_message }}</span></span>
+         <textarea name="message" rows="4" maxlength="{{ max_message }}"></textarea>
+       </label>
++      <div class="photo-pick">
++        <p class="field__label">Фото на открытку <span class="field__counter">необязательно</span></p>
++        <label class="check">
++          <input type="checkbox" id="photo-consent">
++          <span>На фото я или люди, которые не против, чтобы снимок был в открытке</span>
++        </label>
++        <div class="photo-pick__row">
++          <label class="file-drop file-drop--small">
++            <input type="file" id="photo-file" accept="image/*">
++            <span class="file-drop__title" id="photo-pick-title">Выбрать фото</span>
++            <span class="hint">Появится на лицевой стороне, как полароид.</span>
++          </label>
++          <button type="button" class="btn btn--quiet" id="photo-remove" hidden>Убрать фото</button>
++        </div>
++        <p class="status" id="photo-status" role="status" aria-live="polite"></p>
++      </div>
+     </section>
+ 
+     <section class="step" aria-labelledby="s3">
+@@ -168,6 +184,12 @@
+             <p class="hint" id="result-note">Отсканируйте QR телефоном, подключённым к той же сети.</p>
+           </div>
+         </div>
++        <div class="result__status" id="result-status" hidden>
++          <p class="field__label">Статус открытки — только для вас</p>
++          <p class="hint">Там видно, когда открытку открыли, и туда придут ответы-селфи. Получателю эту ссылку не отправляйте.</p>
++          <p class="result__status-url" id="status-url"></p>
++          <a class="btn" id="status-link" target="_blank" rel="noopener">Следить за открыткой</a>
++        </div>
+         <button type="button" class="btn btn--quiet" id="again-btn">Сделать ещё одну</button>
+       </section>
+     </div>
+@@ -184,4 +206,6 @@
+   };
+ </script>
+ <script src="{{ url_for('static', filename='js/create.js') }}"></script>
++<script src="{{ url_for('static', filename='js/photo-utils.js') }}"></script>
++<script src="{{ url_for('static', filename='js/photos-create.js') }}"></script>
+ {% endblock %}
+--- a/templates/card.html
++++ b/templates/card.html
+@@ -7,7 +7,7 @@
+ {% endblock %}
+ {% block body_class %}page-card{% endblock %}
+ {% block body %}
+-<main class="stage" style="--face: {{ theme.face }}; --face-ink: {{ theme.ink }};">
++<main class="stage" style="--face: {{ theme.face }}; --face-ink: {{ theme.ink }};" data-card-code="{{ card.code }}">
+ 
+   <div class="envelope" id="envelope" data-locked="{{ 'true' if locked else 'false' }}"
+        {% if card.open_at %}data-open-at="{{ card.open_at }}"{% endif %}>
+@@ -30,7 +30,7 @@
+   <div class="opened" id="opened" hidden>
+     {{ postcard(theme, card.recipient, card.message, card.sender,
+                 (card.duration_ms // 60000) ~ ":" ~ "%02d" | format((card.duration_ms // 1000) % 60),
+-                size=message_size(card.message)) }}
++                size=message_size(card.message), photo_url=card_photo_url(card.code)) }}
+     <div class="player">
+       <audio id="card-audio" controls preload="auto" src="{{ audio_url }}"></audio>
+       <div class="player__actions">
+@@ -38,10 +38,29 @@
+         <a class="btn btn--quiet" href="{{ url_for('index') }}">Сделать свою открытку</a>
+       </div>
+     </div>
++    {% if photo_replies_enabled(card.code) %}
++    <section class="smile" id="smile"
++             data-thanks="Улыбка отправлена! {{ card.sender or 'Отправитель' }} её увидит.">
++      <h2 class="smile__title">Ответить улыбкой</h2>
++      <p class="hint">Сфотографируйте себя — {{ card.sender or 'отправитель' }} увидит, как вам открытка. Снимок не появится на открытке, его видит только отправитель.</p>
++      <label class="check">
++        <input type="checkbox" id="smile-consent">
++        <span>Согласен(на) отправить своё фото {% if card.sender %}— его увидит {{ card.sender }}{% else %}отправителю открытки{% endif %}</span>
++      </label>
++      <input type="file" id="smile-file" accept="image/*" capture="user" hidden>
++      <button type="button" class="btn btn--primary smile__btn" id="smile-btn">📷 Ответить улыбкой</button>
++      <p class="status" id="smile-status" role="status" aria-live="polite"></p>
++      <figure class="polaroid polaroid--sent" id="smile-sent" hidden>
++        <img alt="Ваша улыбка">
++      </figure>
++    </section>
++    {% endif %}
+   </div>
+   {% endif %}
+ </main>
+ {% endblock %}
+ {% block scripts %}
+ <script src="{{ url_for('static', filename='js/card.js') }}"></script>
++<script src="{{ url_for('static', filename='js/photo-utils.js') }}"></script>
++<script src="{{ url_for('static', filename='js/photos-card.js') }}"></script>
+ {% endblock %}

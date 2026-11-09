@@ -1,0 +1,8 @@
+flask>=3.0
+pydub==0.25.1
+audioop-lts; python_version >= "3.13"
+imageio-ffmpeg>=0.5
+qrcode>=7.4
+numpy>=1.26
+psutil>=5.9
+cryptography>=41

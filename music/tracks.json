@@ -1,0 +1,23 @@
+[
+  {
+    "id": "warm-evening",
+    "file": "warm-evening.mp3",
+    "title": "Тёплый вечер",
+    "mood": "спокойная, пианино",
+    "license": "Собственная: сгенерирована скриптом проекта tools/make_music.py"
+  },
+  {
+    "id": "celebration",
+    "file": "celebration.mp3",
+    "title": "Праздник",
+    "mood": "бодрая, с ударными",
+    "license": "Собственная: сгенерирована скриптом проекта tools/make_music.py"
+  },
+  {
+    "id": "snowflakes",
+    "file": "snowflakes.mp3",
+    "title": "Снежинки",
+    "mood": "зимняя, музыкальная шкатулка",
+    "license": "Собственная: сгенерирована скриптом проекта tools/make_music.py"
+  }
+]

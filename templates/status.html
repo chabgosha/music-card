@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Статус открытки{% endblock %}
+{% block meta %}<meta name="robots" content="noindex">{% endblock %}
+{% block body_class %}page-card page-status{% endblock %}
+{% block body %}
+<main class="stage" style="--face: {{ theme.face }}; --face-ink: {{ theme.ink }};">
+  <section class="st-card">
+    <div class="st-card__head">
+      <span class="st-card__stamp" aria-hidden="true"><span>{{ theme.stamp }}</span></span>
+      <div>
+        <p class="st-card__kicker">Статус открытки · видите только вы</p>
+        <h1 class="st-card__title">{{ theme.title }}{% if s.recipient %} для <span class="hand">{{ s.recipient }}</span>{% endif %}</h1>
+      </div>
+    </div>
+
+    <ol class="st-steps">
+      <li class="st-step" id="st-created"><span class="st-step__dot" aria-hidden="true"></span><span class="st-step__text"></span></li>
+      <li class="st-step" id="st-opened"><span class="st-step__dot" aria-hidden="true"></span><span class="st-step__text"></span></li>
+      <li class="st-step" id="st-listened"><span class="st-step__dot" aria-hidden="true"></span><span class="st-step__text"></span></li>
+    </ol>
+
+    <h2 class="st-card__subtitle">Ответы улыбкой <span id="replies-count"></span></h2>
+    <p class="hint" id="replies-empty">Пока нет. Когда получатель ответит селфи, оно появится здесь: страница обновляется сама.</p>
+    <div class="replies" id="replies" aria-live="polite"></div>
+
+    <div class="player__actions">
+      <a class="btn" href="{{ card_url }}" target="_blank" rel="noopener">Посмотреть открытку</a>
+      <a class="btn btn--quiet" href="{{ url_for('index') }}">Сделать ещё одну</a>
+    </div>
+  </section>
+</main>
+{% endblock %}
+{% block scripts %}
+<script>
+  window.STATUS_DATA = {{ s | tojson }};
+  window.STATUS_TOKEN = {{ token | tojson }};
+</script>
+<script src="{{ url_for('static', filename='js/status.js') }}"></script>
+{% endblock %}

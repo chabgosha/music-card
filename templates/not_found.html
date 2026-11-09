@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Открытка не найдена{% endblock %}
+{% block body_class %}page-card{% endblock %}
+{% block body %}
+<main class="stage">
+  <div class="envelope envelope--plain">
+    <div class="envelope__body">
+      <p class="envelope__to">Такой открытки нет</p>
+      <p class="envelope__note">Проверьте ссылку: возможно, в ней не хватает символов.</p>
+      <a class="btn btn--primary" href="{{ url_for('index') }}">Сделать свою открытку</a>
+    </div>
+  </div>
+</main>
+{% endblock %}

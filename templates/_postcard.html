@@ -1,0 +1,31 @@
+{# Открытка: слева «лицевая сторона» в цвете повода, справа «оборот» с текстом, маркой и штемпелем.
+   Используется и в конструкторе (живой предпросмотр), и на странице получателя. #}
+{% macro postcard(theme, recipient="", message="", sender="", stamp_note="", preview=False, size="", photo_url="") %}
+<div class="airmail{% if preview %} airmail--preview{% endif %}">
+  <article class="postcard" data-postcard data-size="{{ size }}"
+           style="--face: {{ theme.face }}; --face-ink: {{ theme.ink }};">
+    <div class="postcard__front">
+      <p class="postcard__occasion" data-pc="occasion">{{ theme.title }}</p>
+      <svg class="postcard__waves" viewBox="0 0 120 120" aria-hidden="true">
+        <circle cx="16" cy="104" r="7" fill="currentColor"/>
+        <path d="M16 80a24 24 0 0 1 24 24" />
+        <path d="M16 60a44 44 0 0 1 44 44" />
+        <path d="M16 40a64 64 0 0 1 64 64" />
+        <path d="M16 20a84 84 0 0 1 84 84" />
+      </svg>
+      <figure class="polaroid polaroid--front" data-pc-photo{% if not photo_url %} hidden{% endif %}>
+        <img src="{{ photo_url or '' }}" alt="Фото от отправителя" data-pc="photo">
+      </figure>
+    </div>
+    <div class="postcard__back">
+      <div class="postcard__stamp" aria-hidden="true"><span data-pc="stamp">{{ theme.stamp }}</span></div>
+      <div class="postcard__postmark" aria-hidden="true">
+        <span data-pc="postmark">{{ stamp_note }}</span>
+      </div>
+      <p class="postcard__line">Кому: <span class="hand" data-pc="recipient">{{ recipient }}</span></p>
+      <p class="postcard__message hand" data-pc="message">{{ message }}</p>
+      <p class="postcard__line postcard__line--from">От: <span class="hand" data-pc="sender">{{ sender }}</span></p>
+    </div>
+  </article>
+</div>
+{% endmacro %}
